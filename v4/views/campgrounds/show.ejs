@@ -1,0 +1,10 @@
+<%- include("../partials/header") %>
+<h1>This is a show templete!</h1>
+<p><%= campground.name%></p>
+<img src="<%= campground.image%>" alt="">
+<p><%= campground.description%></p>
+<p><a class="btn btn-success" href="/campgrounds/<%= campground._id%>/comments/new">Add New Comment</a></p>
+<% campground.comments.forEach((comment) => { %>
+    <p><strong><%= comment.author %></strong> - <%= comment.text %></p>
+<% }); %> 
+<%- include("../partials/footer") %>
