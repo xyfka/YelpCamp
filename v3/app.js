@@ -1,37 +1,17 @@
 var express         = require("express"),
     app             = express(),
     bodyParser      = require("body-parser"),
-    mongoose        = require("mongoose");
+    mongoose        = require("mongoose"),
+    Campground      = require("./models/campground"),
+    Comment         = require("./models/comment");
+    seedDB          = require("./seeds");
+
 
 mongoose.set('useUnifiedTopology', true);
 mongoose.connect("mongodb://localhost/yelp_camp", { useNewUrlParser: true });
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-
-// Schema Setup
-
-var campgroundSchema = new mongoose.Schema({
-        name: String,
-        image: String,
-        description: String
-});
-
-var Campground = mongoose.model("Campground", campgroundSchema);
-
-// Campground.create(
-//     {
-//         name: "Zakopane", 
-//         image: "https://images.unsplash.com/photo-1559760283-b522593aa0b6?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=449&q=80",   
-//         description: "This is a silly place!"
-//     }, (err, campground) => {
-//         if(err){
-//             console.log("We have an error!");
-//             console.log(err);
-//         } else {
-//             console.log("Campground created!");
-//             console.log(campground);
-//         }
-//     });
+seedDB();
 
 
 app.get("/", (req, res) => {
@@ -44,7 +24,7 @@ app.get("/campgrounds", (req, res) => {
         if(err){
             console.log(err);
         }else {
-            res.render("index", {campgrounds: allCampground});
+            res.render("campgrounds/index", {campgrounds: allCampground});
         }
     });
 });
@@ -61,30 +41,60 @@ app.post("/campgrounds", (req, res) => {
             res.redirect("/campgrounds");
         }
     });
-
-    
 });
-
 app.get("/campgrounds/new", (req, res) => {
-    res.render("new");
+    res.render("campgrounds/new");
 });
 
+// --- SHOW route ---
 
-app.get("/campgrounds/:id", (req, res) => {
-    
-    Campground.findById(req.params.id, (err, foundCampground) => {
+app.get("/campgrounds/:id", (req, res) => {   
+    Campground.findById(req.params.id).populate("comments").exec((err, foundCampground) => {
         if(err){
             console.log(err);
         } else {
-            res.render("show", {campground: foundCampground});
+            res.render("campgrounds/show", {campground: foundCampground});
         }
     });
+});
 
+// =========================================================
+//                      COMMENTS ROUTES
+// =========================================================
+
+app.get("/campgrounds/:id/comments/new", (req, res) => {
+    Campground.findById(req.params.id, (err, campground) => {
+        if(err){
+            console.log(err);
+        } else {
+            res.render("comments/new", {campground: campground});
+        }
+    });
+});
+
+app.post("/campgrounds/:id/comments", (req, res) => {
+    Campground.findById(req.params.id, (err, campground) => {
+        if (err) {
+            console.log(err);
+            res.redirect("/campgrounds");
+        } else {
+            Comment.create(req.body.comment, (err, comment) => {
+                if (err) {
+                    console.log(err);
+                } else {
+                    campground.comments.push(comment);
+                    campground.save();
+                    res.redirect("/campgrounds/" + campground._id);
+                }
+            });
+        }
+    });
 });
 
 
-
-
+// =========================================================
+//                      SERVER START
+// =========================================================
 app.listen(3000, () => {
     console.log("Server run on port 3000.");
 });
